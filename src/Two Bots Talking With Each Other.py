@@ -1,5 +1,8 @@
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from time import sleep
 import re
 
@@ -10,24 +13,28 @@ def deEmojify(text):
         u"\U0001F680-\U0001F6FF"  # transport & map symbols
         u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
                            "]+", flags = re.UNICODE)
-    return regrex_pattern.sub(r'',text)
+    return regrex_pattern.sub(r'', text)
 
 
 class Bot:
     def __init__(self):
-        self.driver = webdriver.Chrome()
+        self.driver = webdriver.Firefox()
 
     def visit(self, bot_type: str, language='en'):
 
         # Visit the website
         self.driver.get('https://www.{}.com/{}/'.format(bot_type.lower(), language.lower()))
 
+        # Click undrestood button
+        # For some reason an iframe blocks the button from being able to click so I just executed the onclick script.
+        # Also, switching to the iframe didn't work
+        understoodButton = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'understood')))
+        onClickScript = understoodButton.get_attribute('onclick')
+        self.driver.execute_script(onClickScript)
+
         # Find input bar
-        while True:
-            try:
-                self.inputBar = self.driver.find_element_by_class_name('stimulus')
-            except: pass
-            else: break
+        self.inputBar = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'stimulus')))
+
 
     # Say something to bot
     def say(self, message: str):
@@ -37,14 +44,15 @@ class Bot:
 
     # Get last message of bot
     def getLastMessage(self):
-        while self.driver.find_element_by_id('line1').find_element_by_class_name('bot').text == ' ':
+
+        while self.driver.find_element(By.ID, 'line1').find_element(By.CLASS_NAME, 'bot').text == ' ':
             pass
-        previous = self.driver.find_element_by_id('line1').find_element_by_class_name('bot').text
+        previous = self.driver.find_element(By.ID, 'line1').find_element(By.CLASS_NAME, 'bot').text
         while True:
             sleep(0.5)
-            if self.driver.find_element_by_id('line1').find_element_by_class_name('bot').text == previous:
+            if self.driver.find_element(By.ID, 'line1').find_element(By.CLASS_NAME, 'bot').text == previous:
                 break
-            previous = self.driver.find_element_by_id('line1').find_element_by_class_name('bot').text
+            previous = self.driver.find_element(By.ID, 'line1').find_element(By.CLASS_NAME, 'bot').text
         return previous
 
     def close(self):
@@ -54,15 +62,15 @@ class Bot:
 def main():
 
     # You can change it to whatever bot you want
-    evie = Bot()
-    evie.visit(bot_type='eviebot')
+    firstBot = Bot()
+    firstBot.visit(bot_type='eviebot')
 
-    pewdie = Bot()
-    pewdie.visit(bot_type='pewdiebot')
+    secondBot = Bot()
+    secondBot.visit(bot_type='boibot')
 
     while True:
-        evie.say(pewdie.getLastMessage())
-        pewdie.say(evie.getLastMessage())
+        firstBot.say(secondBot.getLastMessage())
+        secondBot.say(firstBot.getLastMessage())
 
 if __name__ == '__main__':
     main()
